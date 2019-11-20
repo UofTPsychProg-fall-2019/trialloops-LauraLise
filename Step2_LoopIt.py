@@ -5,47 +5,124 @@ Build a trial loop Step 2
 Use this template to turn Step 1 into a loop
 @author: katherineduncan
 """
+
 #%% Required set up 
-# this imports everything you might need and opens a full screen window
-# when you are developing your script you might want to make a smaller window 
-# so that you can still see your console 
+
 import numpy as np
 import pandas as pd
 import os, sys
+import random
 from psychopy import visual, core, event, gui, logging
+
+
+#%% identify who the data belongs to 
+
+# show the dialog box, create a field for subject ID and session number
+subgui = gui.Dlg()
+subgui.addField("Subject ID:")
+subgui.addField("Session Number:")
+
+# show the gui
+subgui.show()
+
+# put the inputted data in easy to use variables
+subjID = subgui.data[0]
+sessNum = subgui.data[1]
+
+# if the file name already exists, give a notification and exit out of the experiment
+ouputFileName = 'sub'+subjID+'_'+'sess'+sessNum+'.csv'
+if os.path.isfile(ouputFileName) :
+    sys.exit("data for this session already exists")
+
+
+
+#%% set up study  
+
+# pressing q will quit 
+event.globalKeys.add(key='q', func=core.quit)
 
 # open a white full screen window
 win = visual.Window(fullscr=True, allowGUI=False, color='white', unit='height') 
 
-# uncomment if you use a clock. Optional because we didn't cover timing this week, 
-# but you can find examples in the tutorial code 
-#trialClock = core.Clock()
+# a list called "stim" that contains trial-specific info (stimulus, etc)
+stim = ['A','B','C','D','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','W','X','Y','Z']
+
+# randomly shuffle the stimuli so the order is no predictable 
+random.shuffle(stim)
+
+#define the number of stimuli
+nstim = len(stim)
+
+# define the count
+myCount = 0
+
+# create empty lists, which will be used to store the button responses, stimuli presented, and trial number
+response_to_save = []
+stim_to_save = []
+trialnum_to_save = []
 
 
-#%% your loop here
-# start by copying your one trial here, then identify what needs to be
-# changed on every trial.  Likely your stimuli, but you might want to change a few things
+#%% my loop here
 
+# task instructions before starting the loop 
 
-# make a list or a pd.DataFrame that contains trial-specific info (stimulus, etc)
-# e.g. stim = ['1.jpg','2.jpg','3.jpg']
+instructions = visual.ImageStim(win, image='instructions.jpg', pos=(0,0), size=(1.5,1.5)) 
+instructions.draw()
+win.flip()
+event.waitKeys(keyList=['f'])
 
+#%% my loop here
 
-# make your loop
-for t in ... :
+for trial in range(nstim): 
+    myCount += 1 # keep track of the trial number 
+    thisStimName = stim[trial] # index the items in the stimulus list 
     
-    # include your trial code in your loop but replace anything that should 
-    # change on each trial with a variable that uses your iterater
-    # e.g. thisStimName = stim[t]
-    #      thisStim = visual.ImageStim(win, image=thisStimName ...)
+    # define the stimuli and text to use for the experiment 
+    thisStim = visual.ImageStim(win, image='letters'+'/'+ thisStimName + '.jpg', pos=(0,0), size=(1.5,1.5)) # give path to stimulus (using thisStimName)
+    myTextquestion = visual.TextStim(win, text="Was this letter on the study list?", pos = (0,0.5), color="black") 
+    myTextF = visual.TextStim(win, text="f = yes", pos = (-0.25,-0.5), color="black") 
+    myTextJ = visual.TextStim(win, text="j = no", pos = (0.25,-0.5), color="black") 
+    fixation = visual.TextStim(win, text="+", color="black")
     
-    # if you're recording responses, be sure to store your responses in a list
-    # or DataFrame which also uses your iterater!
+    # draw the text and the stimulus 
+    thisStim.draw() 
+    myTextquestion.draw()
+    myTextF.draw()
+    myTextJ.draw()
+    
+    # flip it
+    win.flip()
+    
+    # define which keys are valid responses and the max time the stimulus will be shown
+    keys = event.waitKeys(keyList=['f','j'],maxWait=(3))
+    
+    # save the responses, stimuli shown, and trial number in a numpy array
+    response_to_save = np.append(response_to_save, keys)
+    stim_to_save = np.append(stim_to_save, thisStimName)
+    trialnum_to_save = np.append(trialnum_to_save, myCount)
+    
+    # show a fixation after each letter stimulus 
+    fixation.draw()
+    win.flip()
+    
+    # clear the events
+    event.clearEvents() 
 
-
-#%% Required clean up
-# this cell will make sure that your window displays for a while and then 
-# closes properly
-
-core.wait(2)
+core.wait(1)
 win.close()
+
+
+
+#%% save the data into a csv file 
+
+# Create a dictionary with the data
+data = {'Stimulus': stim_to_save, 
+        'Response': response_to_save, 
+        'Trial': trialnum_to_save} 
+  
+# Convert the dictionary into a pandas DataFrame 
+out = pd.DataFrame(data) 
+
+# Save the pandas DataFrame into a csv file, which is named after the subject ID and session number
+out.to_csv('sub'+subjID+'_'+'sess'+sessNum+'.csv', index = False)
+
